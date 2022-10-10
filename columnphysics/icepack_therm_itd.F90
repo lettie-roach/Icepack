@@ -1241,6 +1241,11 @@
             end do
          end do
       end if
+      if (SUM(aicen(:))>1e-10_dbl_kind) then
+       do n = 1, ncat
+           print *, 'dafsd_latm(',n,')=',afsdn(:,n)-afsdn_init(:,n)
+       end do
+     end if
 
       end subroutine lateral_melt
 
@@ -1560,7 +1565,7 @@
       !-----------------------------------------------------------------
       ! Compute the volume, area, and thickness of new ice.
       !-----------------------------------------------------------------
-
+      print *, 'frzmlt=',frzmlt
       fnew = max (frzmlt, c0)    ! fnew > 0 iff frzmlt > 0
       vi0new = -fnew*dt / qi0new ! note sign convention, qi < 0
       vi0_init = vi0new          ! for bgc

@@ -440,7 +440,7 @@
       use icedrv_state, only: aice, aicen, aice0, trcr_depend
       use icedrv_state, only: aicen_init, vicen_init, trcrn, vicen, vsnon
       use icedrv_state, only: trcr_base, n_trcr_strata, nt_strata
-
+      use icepack_tracers, only: nt_fsd
       ! column package_includes
       use icepack_intfc, only: icepack_step_therm2
 
@@ -450,7 +450,7 @@
       ! local variables
 
       integer (kind=int_kind) :: &
-         i       ! horizontal index
+         i,n       ! horizontal index
 
       integer (kind=int_kind) :: &
          ntrcr, nbtrcr
@@ -478,6 +478,13 @@
             ! wave_sig_ht - compute here to pass to add new ice
             if (tr_fsd) &
             wave_sig_ht(i) = c4*SQRT(SUM(wave_spectrum(i,:)*dwavefreq(:)))
+            print *, 'aice(',i,')=',aice(i)
+            if (aice(i) > 1e-10_dbl_kind) then
+            do n = 1, 5
+                print *, 'A afsdn(',i,',',n,')=',trcrn(i,nt_fsd:nt_fsd+nfsd-1,n)
+            end do
+            end if
+
 
             call icepack_step_therm2(dt=dt, ncat=ncat,                &
                          nltrcr=nltrcr, nilyr=nilyr, nslyr=nslyr,     &
@@ -524,6 +531,12 @@
                          d_afsd_weld=d_afsd_weld(i,:),                &
                          floe_rad_c=floe_rad_c(:),                    &
                          floe_binwidth=floe_binwidth(:))
+            if (aice(i) > 1e-10_dbl_kind) then
+            do n = 1, 5
+                print *, 'B afsdn(',i,',',n,')=',trcrn(i,nt_fsd:nt_fsd+nfsd-1,n)
+            end do
+            end if
+
 
          endif ! tmask
 
@@ -655,14 +668,14 @@
       use icedrv_domain_size, only: ncat, nfsd, nfreq, nx
       use icedrv_state, only: trcrn, aicen, aice, vice
       use icepack_intfc, only: icepack_step_wavefracture
-
+      use icepack_tracers, only: nt_fsd
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
 
       ! local variables
 
       integer (kind=int_kind) :: &
-         i, j,            & ! horizontal indices
+         i, j,n,            & ! horizontal indices
          ntrcr,           & !
          nbtrcr             !
 
@@ -694,7 +707,13 @@
                         trcrn         = trcrn        (i,:,:),  &
                         d_afsd_wave   = d_afsd_wave  (i,:),    & 
                         fracture_hist = fracture_hist(i,:))
-      end do ! i
+             if (aice(i)> 1e-10_dbl_kind) then
+            do n = 1, 5
+                print *, 'C afsdn(',i,',',n,')=',trcrn(i,nt_fsd:nt_fsd+nfsd-1,n)
+            end do
+            end if
+
+     end do ! i
       end if
 
       call icepack_warnings_flush(nu_diag)

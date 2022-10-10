@@ -801,6 +801,12 @@
          endif ! d_an_newi > puny
       endif    ! n = 1
 
+      if (SUM(aicen(:))>1e-10_dbl_kind) then
+          print *, 'dafsdn_latg(',n,') ',afsdn_latg(:,n)-afsdn(:,n)
+          print *, 'dafsdn_newi(',n,') ',trcrn(nt_fsd:nt_fsd+nfsd-1,n)-afsdn_latg(:,n)
+      end if
+
+
       ! history/diagnostics
       do k = 1, nfsd
          ! sum over n
@@ -1038,6 +1044,12 @@
             d_afsd_weld(k) = d_afsd_weld(k) + aicen(n)*d_afsdn_weld(k,n)
          end do ! n
       end do    ! k
+
+     if (SUM(aicen(:))>1e-10_dbl_kind) then
+    do n = 1, ncat
+          print *, 'dafsdn_weld(',n,') ',d_afsdn_weld(:,n)
+      end do
+      end if
 
       end subroutine fsd_weld_thermo
 

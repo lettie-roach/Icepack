@@ -425,7 +425,11 @@
           endif ! fracture hist > 0
 
       endif          ! aice > p01
-
+      if (aice>1e-10_dbl_kind) then
+      do n = 1, ncat
+          print *, 'dafsd_wave(',n,')=',d_afsdn_wave(:,n)
+      end do
+      end if
       end subroutine icepack_step_wavefracture
 
 !=======================================================================
