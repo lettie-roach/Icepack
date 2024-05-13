@@ -42,7 +42,7 @@
       real (kind=dbl_kind), parameter  :: &
          swh_minval = 0.01_dbl_kind,  & ! minimum value of wave height (m)
          straincrit = 3.e-5_dbl_kind, & ! critical strain
-         D          = 1.e4_dbl_kind,  & ! domain size
+!         D          = 1.e4_dbl_kind,  & ! domain size
          dx         = c1,             & ! domain spacing
          threshold  = c10               ! peak-finding threshold -
                                         ! points are defined to be extrema if they
@@ -53,7 +53,7 @@
                                         ! floe size affected by wave fracture
 
       integer (kind=int_kind), parameter :: &
-         nx = 10000         ! number of points in domain
+         nx_fixed = 10000         ! number of points in domain
 
       integer (kind=int_kind), parameter :: &
          max_no_iter = 100 ! max no of iterations to compute wave fracture
@@ -215,7 +215,7 @@
          wavefreq,     & ! wave frequencies (s^-1)
          dwavefreq       ! wave frequency bin widths (s^-1)
 
-      real (kind=dbl_kind), dimension(:), intent(in) :: &
+      real (kind=dbl_kind), dimension(:), intent(inout) :: &
          wave_spectrum   ! ocean surface wave spectrum as a function of frequency
                          ! power spectral density of surface elevation, E(f) (units m^2 s)
 
@@ -259,15 +259,31 @@
       d_afsdn_wave   (:,:) = c0
       fracture_hist  (:)   = c0
 
+      hbar = c1
+      wave_spectrum = (/0.000000000000000E+000,  4.048108530696481E-005, &
+  5.282969796098769E-004,  1.064894371666014E-003,  1.249741762876511E-003, &
+  1.229491783306003E-003,  1.080903923138976E-003,  8.635559934191406E-004, &
+  9.837691904976964E-004,  1.176746212877333E-003,  2.027775160968304E-003, &
+  4.147783387452364E-003,  8.442047052085400E-003,  3.563777357339859E-002, &
+  5.805501341819763E-002,  2.729533798992634E-002,  7.663844618946314E-003, &
+  1.658817403949797E-003,  7.883401121944189E-004,  4.551284946501255E-004, &
+  4.689317429438233E-004,  9.280506637878716E-004,  5.240151658654213E-004, &
+  5.421090172603726E-004,  5.024557467550039E-004/)
+
+      print *, 'wave_spec ',wave_spectrum
+      print *, 'hbar = ',hbar
+
+
       ! if all ice is not in first floe size category
       if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny)) then
 
 
       ! do not try to fracture for minimal ice concentration or zero wave spectrum
+      ! we will remove this condition
       if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
 
-         hbar = vice / aice
-
+         !hbar = vice / aice
+         print *, 'now call wave_frac'
          ! calculate fracture histogram
          call wave_frac(nfsd, nfreq, wave_spec_type, &
                         floe_rad_l, floe_rad_c, &
@@ -440,10 +456,10 @@
          spec_coeff,               &
          phi, rand_array, summand
 
-      real (kind=dbl_kind), dimension(nx) :: &
+      real (kind=dbl_kind), dimension(nx_fixed) :: &
          fraclengths
 
-      real (kind=dbl_kind), dimension(nx) :: &
+      real (kind=dbl_kind), dimension(nx_fixed) :: &
          X,  &    ! spatial domain (m)
          eta      ! sea surface height field (m)
 
@@ -453,8 +469,8 @@
 
       character(len=*),parameter :: &
          subname='(wave_frac)'
-
-
+    
+      print *, 'wave_spec_type ',wave_spec_type
       if (trim(wave_spec_type).eq.'random') then
           ! run wave fracture to convergence
           loop_max_iter = max_no_iter
@@ -463,7 +479,7 @@
       end if
 
       ! spatial domain
-      do j = 1, nx
+      do j = 1, nx_fixed
          X(j)= j*dx
       end do
 
@@ -487,15 +503,25 @@
          ! Phase for each Fourier component may be constant or
          ! a random phase that varies in each i loop
          ! See documentation for discussion
-         if (trim(wave_spec_type).eq.'random') then
-            call RANDOM_NUMBER(rand_array)
-            if (icepack_warnings_aborted(subname)) return
-         else
-            rand_array(:) = p5
-         endif
+         !if (trim(wave_spec_type).eq.'random') then
+         !   call RANDOM_NUMBER(rand_array)
+         !   if (icepack_warnings_aborted(subname)) return
+         !else
+         !   rand_array(:) = p5
+         !endif
+         rand_array = (/3.920868194323862E-007,  2.548044275764261E-002, &
+  0.352516161261067,       0.666914481524251,       0.963055531894656, &     
+  0.838288203465982,       0.335355043646496,       0.915327203368213, &     
+  0.795863676652503,       0.832693143644796,       0.345042693116063, &     
+  0.871183932316783,       8.991835668825542E-002,  0.888283839684037, &     
+  0.700978902440147,       0.734552583860683,       0.300175817923128, &     
+  4.971772349719251E-002,  0.908189377373128,       9.765859753870422E-002, &
+  4.031338096905369E-002,  8.502479466940610E-002,  0.558820973383161, &     
+  0.926451747654190,       7.564077406631106E-002/)
+         print *, 'rand_array ',rand_array
          phi = c2*pi*rand_array
 
-         do j = 1, nx
+         do j = 1, nx_fixed
             ! SSH field in space (sum over wavelengths, no attenuation)
             summand = spec_coeff*COS(2*pi*X(j)/lambda+phi)
             eta(j)  = SUM(summand)
@@ -572,17 +598,18 @@
       real (kind=dbl_kind), intent(in) :: &
          hbar             ! mean thickness (m)
 
-      real (kind=dbl_kind), intent(in), dimension (nx) :: &
+      real (kind=dbl_kind), intent(in), dimension (:) :: &
          X, &              ! spatial domain (m)
          eta               ! sea surface height field (m)
 
-      real (kind=dbl_kind), intent(inout), dimension (nx) :: &
+      real (kind=dbl_kind), intent(inout), dimension (:) :: &
          fraclengths      ! The distances between fracture points
-                          ! Size cannot be greater than nx.
+                          ! Size cannot be greater than nx_fixed.
                           ! In practice, will be much less
 
       ! local variables
       integer (kind=int_kind) :: &
+         nx_fixed,            & ! number of points in domain
          spcing,        & ! distance over which to search for extrema on each side of point
          j, k,          & ! indices to iterate over domain
          first, last,   & ! indices over which to search for extrema
@@ -590,11 +617,11 @@
          j_pos,         & ! nearest extrema forwards
          n_above          ! number of points where strain is above critical
 
-      real (kind=dbl_kind), dimension(nx) :: &
+      real (kind=dbl_kind), dimension(:), allocatable :: &
          fracdistances, & ! distances in space where fracture has occurred
          strain           ! the strain between triplets of extrema
 
-      logical (kind=log_kind), dimension(nx) :: &
+      logical (kind=log_kind), dimension(:), allocatable :: &
          is_max, is_min,& ! arrays to hold whether each point is a local max or min
          is_extremum,   & ! or extremum
          is_triplet       ! or triplet of extrema
@@ -606,6 +633,14 @@
 
       integer (kind=int_kind), dimension(1) :: &
          maxj, minj       ! indices of local max and min
+
+      nx_fixed = size(eta)
+      allocate(fracdistances (nx_fixed))
+      allocate(strain (nx_fixed))
+      allocate(is_max (nx_fixed))
+      allocate(is_min (nx_fixed))
+      allocate(is_extremum (nx_fixed))
+      allocate(is_triplet (nx_fixed))
 
       ! ------- equivalent of peakfinder2
       ! given eta and spcing, compute extremelocs in ascending order
@@ -623,11 +658,11 @@
       ! search for local max and min within spacing
       ! on either side of each point
 
-      do j = 1, nx
+      do j = 1, nx_fixed
 
          ! indices within which to search for local max and min
          first = MAX(1,j-spcing)
-         last  = MIN(nx,j+spcing)
+         last  = MIN(nx_fixed,j+spcing)
 
          ! location of max and min within spacing
          maxj = MAXLOC(eta(first:last))
@@ -643,7 +678,7 @@
 
       ! loop over points
       ! nothing can happen at the first or last
-      do j = 2, nx-1
+      do j = 2, nx_fixed-1
          if (is_extremum(j)) then
             if (j == 2) then
                if (is_extremum(1)) j_neg = 1
@@ -656,7 +691,7 @@
                end do
             end if
 
-            do k = j+1, nx
+            do k = j+1, nx_fixed
                if (is_extremum(k)) then
                   j_pos = k
                   EXIT
@@ -701,7 +736,7 @@
       if (n_above>0) then
 
           k = 0
-          do j = 1, nx
+          do j = 1, nx_fixed
             if (strain(j) > straincrit) then
               k = k + 1
               fracdistances(k) = X(j)
