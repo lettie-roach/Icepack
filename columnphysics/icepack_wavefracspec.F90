@@ -30,7 +30,7 @@
 
       use icepack_kinds
       use icepack_parameters, only: p01, p5, c0, c1, c2, c3, c4, c10
-      use icepack_parameters, only: bignum, puny, gravit, pi
+      use icepack_parameters, only: bignum, puny, gravit, pi, rhow
       use icepack_tracers, only: nt_fsd
       use icepack_warnings, only: warnstr, icepack_warnings_add,  icepack_warnings_aborted
       use icepack_fsd
@@ -277,9 +277,14 @@
       ! if all ice is not in first floe size category
       if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny)) then
 
-
+      !fracture_hist(:) = c0
+      !call solve_yt_for_strain(nfsd, nfreq, & 
+      !                         floe_rad_l, floe_rad_c, &
+      !                         wavefreq, dwavefreq, &
+      !                         100.0_dbl_kind, &
+      !                         hbar, wave_spectrum, fracture_hist)
+ 
       ! do not try to fracture for minimal ice concentration or zero wave spectrum
-      ! we will remove this condition
       if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
 
          !hbar = vice / aice
