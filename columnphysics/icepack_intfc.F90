@@ -82,7 +82,9 @@
       use icepack_mechred, only: icepack_ice_strength
 
       use icepack_wavefracspec, only: icepack_init_wave
+      use icepack_wavefracspec_alt, only: icepack_step_wavefracture_alt
       use icepack_wavefracspec, only: icepack_step_wavefracture
+
 
       use icepack_snow, only: icepack_init_snow
       use icepack_snow, only: icepack_step_snow

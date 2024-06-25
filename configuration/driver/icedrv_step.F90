@@ -658,7 +658,7 @@
           d_afsd_wave, floe_rad_l, floe_rad_c, wavefreq, dwavefreq
       use icedrv_domain_size, only: ncat, nfsd, nfreq, nx
       use icedrv_state, only: trcrn, aicen, aice, vice
-      use icepack_intfc, only: icepack_step_wavefracture
+      use icepack_intfc, only: icepack_step_wavefracture_alt, icepack_step_wavefracture
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -681,6 +681,21 @@
 
       do i = 1, nx
            d_afsd_wave(i,:) = c0
+
+           if (wave_spec_type.eq.'alt') then
+           call icepack_step_wavefracture_alt (wave_spec_type=wave_spec_type, &
+                        dt=dt, ncat=ncat, nfsd=nfsd, nfreq=nfreq, &
+                        aice          = aice         (i),      &
+                        vice          = vice         (i),      &
+                        aicen         = aicen        (i,:),    &
+                        floe_rad_l    = floe_rad_l     (:),    &
+                        floe_rad_c    = floe_rad_c     (:),    &
+                        wave_spectrum = wave_spectrum(i,:),    &
+                        wavefreq      = wavefreq       (:),    &
+                        dwavefreq     = dwavefreq      (:),    &
+                        trcrn         = trcrn        (i,:,:),  &
+                        d_afsd_wave   = d_afsd_wave  (i,:))
+           else
            call icepack_step_wavefracture (wave_spec_type=wave_spec_type, &
                         dt=dt, ncat=ncat, nfsd=nfsd, nfreq=nfreq, &
                         aice          = aice         (i),      &
@@ -693,6 +708,7 @@
                         dwavefreq     = dwavefreq      (:),    &
                         trcrn         = trcrn        (i,:,:),  &
                         d_afsd_wave   = d_afsd_wave  (i,:))
+           end if
       end do ! i
 
       call icepack_warnings_flush(nu_diag)

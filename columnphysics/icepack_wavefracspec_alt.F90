@@ -127,7 +127,7 @@
       if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny)) then
       if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
 
-          hbar = vice/aice ! note- average thickness
+          !!hbar = vice/aice ! note- average thickness
           DO k = 2, nfsd
               if (.NOT. ALL(trcrn(nt_fsd+k-1,:).ge.c1-puny)) then
                   call solve_yt_for_strain(nfsd, nfreq, & 
@@ -288,6 +288,8 @@
       integer (kind=int_kind) :: &
         nx, n_exceed, j_beg, j_end, j, jj, k, nfrac
  
+      print *, 'BEGIN get fraclengths'
+
       nx = SIZE(strain)
       allocate(exceed_crit_pos (nx))
       allocate(exceed_crit_neg (nx))
@@ -339,7 +341,6 @@
 
       END DO
 
-      print *, 'x=',x
       nfrac = COUNT(extremelocs>0)
       if (nfrac.eq.0) stop 'need to deal with 0 fracture case'
       allocate(fraclengths(nfrac+1))
@@ -440,10 +441,10 @@
            PHIi         ! phase for SSH
 
        real (kind=dbl_kind), dimension(4,4) :: &
-           a ! 4x4 matrix
+           aa ! 4x4 matrix
 
        real (kind=dbl_kind), dimension(4) :: &
-           b, c ! column vectors
+           bb, cc ! column vectors
 
        real (kind=dbl_kind), dimension(:,:), allocatable :: &
            arg
@@ -493,48 +494,48 @@
        print *, 'gamm',gamm
        print *, 'langi',langi
 
-       a(1,1) = EXP(-gamm)*SIN(gamm)
-       a(1,2) = EXP(-gamm)*COS(gamm)
-       a(1,3) = -EXP(gamm)*SIN(gamm)
-       a(1,4) = -EXP(gamm)*COS(gamm)
+       aa(1,1) = EXP(-gamm)*SIN(gamm)
+       aa(1,2) = EXP(-gamm)*COS(gamm)
+       aa(1,3) = -EXP(gamm)*SIN(gamm)
+       aa(1,4) = -EXP(gamm)*COS(gamm)
 
-       a(2,1) = -EXP(gamm)*SIN(gamm)
-       a(2,2) = EXP(gamm)*COS(gamm)
-       a(2,3) = EXP(-gamm)*SIN(gamm)
-       a(2,4) = -EXP(-gamm)*COS(gamm)
+       aa(2,1) = -EXP(gamm)*SIN(gamm)
+       aa(2,2) = EXP(gamm)*COS(gamm)
+       aa(2,3) = EXP(-gamm)*SIN(gamm)
+       aa(2,4) = -EXP(-gamm)*COS(gamm)
 
-       a(3,1) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       a(3,2) = -COS(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
-       a(3,3) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       a(3,4) = -SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+       aa(3,1) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+       aa(3,2) = -COS(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
+       aa(3,3) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+       aa(3,4) = -SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
 
-       a(4,1) = gamm*SIN(gamm)*SINH(gamm) + gamm*COS(gamm)*COSH(gamm) - SIN(gamm)*COSH(gamm)
-       a(4,2) = gamm*SIN(gamm)*SINH(gamm) - gamm*COS(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       a(4,3) = -gamm*COS(gamm)*COSH(gamm) - gamm*SIN(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
-       a(4,4) = -gamm*COS(gamm)*COSH(gamm) + gamm*SIN(gamm)*SINH(gamm) + COS(gamm)*SINH(gamm)
+       aa(4,1) = gamm*SIN(gamm)*SINH(gamm) + gamm*COS(gamm)*COSH(gamm) - SIN(gamm)*COSH(gamm)
+       aa(4,2) = gamm*SIN(gamm)*SINH(gamm) - gamm*COS(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+       aa(4,3) = -gamm*COS(gamm)*COSH(gamm) - gamm*SIN(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
+       aa(4,4) = -gamm*COS(gamm)*COSH(gamm) + gamm*SIN(gamm)*SINH(gamm) + COS(gamm)*SINH(gamm)
 
        print *, '---a---'
-       print *, a
-       print *, 'a(1,2) = ',a(1,2)
+       print *, aa
+       print *, 'aa(1,2) = ',aa(1,2)
 
-       b(1) = Lambda**2*SUM(AAmi/(langi**2)*COS(c1/(c2*langpi)+PHIi))
-       b(2) = Lambda**2*SUM(AAmi/(langi**2)*COS(c1/(c2*langpi)-PHIi))
-       b(3) = - SQRT(c2)/(c2*Lambda)*SUM(AAmi*langi* ( SIN(c1/(c2*langpi)-PHIi) + SIN(c1/(c2*langpi)+PHIi) ))
-       b(4) = - c1/(c2*Lambda**c2)*SUM(AAmi*langi* ( L/c2*SIN(c1/(c2*langpi)-PHIi) &
+       bb(1) = Lambda**2*SUM(AAmi/(langi**2)*COS(c1/(c2*langpi)+PHIi))
+       bb(2) = Lambda**2*SUM(AAmi/(langi**2)*COS(c1/(c2*langpi)-PHIi))
+       bb(3) = - SQRT(c2)/(c2*Lambda)*SUM(AAmi*langi* ( SIN(c1/(c2*langpi)-PHIi) + SIN(c1/(c2*langpi)+PHIi) ))
+       bb(4) = - c1/(c2*Lambda**c2)*SUM(AAmi*langi* ( L/c2*SIN(c1/(c2*langpi)-PHIi) &
                - L/c2*SIN(c1/(c2*langpi)+PHIi) + &
                  langi*COS(c1/(c2*langpi)-PHIi) - langi*COS(c1/(c2*langpi)+PHIi))  )
 
        print *, '---b--'
-       print *, b
+       print *, bb
 
-       call four_by_four_matrix_solver(a,b,c)
+       call four_by_four_matrix_solver(aa,bb,cc)
        print *, '---c--'
-       print *, c
+       print *, cc
 
 
 
-       yH = EXP(xp)*(c(1)*COS(xp)+c(2)*SIN(xp)) + EXP(-xp)*(c(3)*COS(xp)+c(4)*SIN(xp))
-       yppH = (EXP(xp)*(-c(1)*SIN(xp)+c(2)*COS(xp)) - EXP(-xp)*(-c(3)*SIN(xp)+c(4)*COS(xp)))/Lambda**2
+       yH = EXP(xp)*(cc(1)*COS(xp)+cc(2)*SIN(xp)) + EXP(-xp)*(cc(3)*COS(xp)+cc(4)*SIN(xp))
+       yppH = (EXP(xp)*(-cc(1)*SIN(xp)+cc(2)*COS(xp)) - EXP(-xp)*(-cc(3)*SIN(xp)+cc(4)*COS(xp)))/Lambda**2
 
        allocate(arg(nfreq,nx))
        DO j=1,nx
@@ -547,13 +548,15 @@
        ypp = yppP + yppH
 
        strain = hbar*ypp/c2
-       print *, 'strain=',strain
+       print *, 'max strain=',MAXVAL(strain)
 
        if (MAXVAL(ABS(strain)).gt.straincrit) then
            call alt_get_fraclengths(nfsd, floe_rad_c, floe_rad_l, &
                                     x,strain, frac_local)
        end if
 
+
+       print *, 'END subroutine solve_yt'
        end subroutine solve_yt_for_strain
 
 !=======================================================================

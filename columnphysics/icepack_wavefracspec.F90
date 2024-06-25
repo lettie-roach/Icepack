@@ -1,3 +1,5 @@
+!
+!
 !  This module contains the subroutines required to fracture sea ice
 !  by ocean surface waves
 !
@@ -30,7 +32,7 @@
 
       use icepack_kinds
       use icepack_parameters, only: p01, p5, c0, c1, c2, c3, c4, c10
-      use icepack_parameters, only: bignum, puny, gravit, pi, rhow
+      use icepack_parameters, only: bignum, puny, gravit, pi
       use icepack_tracers, only: nt_fsd
       use icepack_warnings, only: warnstr, icepack_warnings_add,  icepack_warnings_aborted
       use icepack_fsd
@@ -52,8 +54,8 @@
                                         ! find this to be the order of the smallest
                                         ! floe size affected by wave fracture
 
-      integer (kind=int_kind), parameter :: &
-         nx_fixed = 10000         ! number of points in domain
+      integer (kind=int_kind), parameter, public :: &
+         nx = 10000         ! number of points in domain
 
       integer (kind=int_kind), parameter :: &
          max_no_iter = 100 ! max no of iterations to compute wave fracture
@@ -461,10 +463,10 @@
          spec_coeff,               &
          phi, rand_array, summand
 
-      real (kind=dbl_kind), dimension(nx_fixed) :: &
+      real (kind=dbl_kind), dimension(nx) :: &
          fraclengths
 
-      real (kind=dbl_kind), dimension(nx_fixed) :: &
+      real (kind=dbl_kind), dimension(nx) :: &
          X,  &    ! spatial domain (m)
          eta      ! sea surface height field (m)
 
@@ -484,7 +486,7 @@
       end if
 
       ! spatial domain
-      do j = 1, nx_fixed
+      do j = 1, nx
          X(j)= j*dx
       end do
 
@@ -526,7 +528,7 @@
          print *, 'rand_array ',rand_array
          phi = c2*pi*rand_array
 
-         do j = 1, nx_fixed
+         do j = 1, nx
             ! SSH field in space (sum over wavelengths, no attenuation)
             summand = spec_coeff*COS(2*pi*X(j)/lambda+phi)
             eta(j)  = SUM(summand)
@@ -609,12 +611,11 @@
 
       real (kind=dbl_kind), intent(inout), dimension (:) :: &
          fraclengths      ! The distances between fracture points
-                          ! Size cannot be greater than nx_fixed.
+                          ! Size cannot be greater than nx.
                           ! In practice, will be much less
 
       ! local variables
       integer (kind=int_kind) :: &
-         nx_fixed,            & ! number of points in domain
          spcing,        & ! distance over which to search for extrema on each side of point
          j, k,          & ! indices to iterate over domain
          first, last,   & ! indices over which to search for extrema
@@ -622,11 +623,11 @@
          j_pos,         & ! nearest extrema forwards
          n_above          ! number of points where strain is above critical
 
-      real (kind=dbl_kind), dimension(:), allocatable :: &
+      real (kind=dbl_kind), dimension(nx) :: &
          fracdistances, & ! distances in space where fracture has occurred
          strain           ! the strain between triplets of extrema
 
-      logical (kind=log_kind), dimension(:), allocatable :: &
+      logical (kind=log_kind), dimension(nx) :: &
          is_max, is_min,& ! arrays to hold whether each point is a local max or min
          is_extremum,   & ! or extremum
          is_triplet       ! or triplet of extrema
@@ -638,14 +639,6 @@
 
       integer (kind=int_kind), dimension(1) :: &
          maxj, minj       ! indices of local max and min
-
-      nx_fixed = size(eta)
-      allocate(fracdistances (nx_fixed))
-      allocate(strain (nx_fixed))
-      allocate(is_max (nx_fixed))
-      allocate(is_min (nx_fixed))
-      allocate(is_extremum (nx_fixed))
-      allocate(is_triplet (nx_fixed))
 
       ! ------- equivalent of peakfinder2
       ! given eta and spcing, compute extremelocs in ascending order
@@ -663,11 +656,11 @@
       ! search for local max and min within spacing
       ! on either side of each point
 
-      do j = 1, nx_fixed
+      do j = 1, nx
 
          ! indices within which to search for local max and min
          first = MAX(1,j-spcing)
-         last  = MIN(nx_fixed,j+spcing)
+         last  = MIN(nx,j+spcing)
 
          ! location of max and min within spacing
          maxj = MAXLOC(eta(first:last))
@@ -683,7 +676,7 @@
 
       ! loop over points
       ! nothing can happen at the first or last
-      do j = 2, nx_fixed-1
+      do j = 2, nx-1
          if (is_extremum(j)) then
             if (j == 2) then
                if (is_extremum(1)) j_neg = 1
@@ -696,7 +689,7 @@
                end do
             end if
 
-            do k = j+1, nx_fixed
+            do k = j+1, nx
                if (is_extremum(k)) then
                   j_pos = k
                   EXIT
@@ -741,7 +734,7 @@
       if (n_above>0) then
 
           k = 0
-          do j = 1, nx_fixed
+          do j = 1, nx
             if (strain(j) > straincrit) then
               k = k + 1
               fracdistances(k) = X(j)
