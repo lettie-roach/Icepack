@@ -261,31 +261,10 @@
       d_afsdn_wave   (:,:) = c0
       fracture_hist  (:)   = c0
 
-      hbar = c1
-      wave_spectrum = (/0.000000000000000E+000,  4.048108530696481E-005, &
-  5.282969796098769E-004,  1.064894371666014E-003,  1.249741762876511E-003, &
-  1.229491783306003E-003,  1.080903923138976E-003,  8.635559934191406E-004, &
-  9.837691904976964E-004,  1.176746212877333E-003,  2.027775160968304E-003, &
-  4.147783387452364E-003,  8.442047052085400E-003,  3.563777357339859E-002, &
-  5.805501341819763E-002,  2.729533798992634E-002,  7.663844618946314E-003, &
-  1.658817403949797E-003,  7.883401121944189E-004,  4.551284946501255E-004, &
-  4.689317429438233E-004,  9.280506637878716E-004,  5.240151658654213E-004, &
-  5.421090172603726E-004,  5.024557467550039E-004/)
-
-      print *, 'wave_spec ',wave_spectrum
-      print *, 'hbar = ',hbar
-
 
       ! if all ice is not in first floe size category
       if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny)) then
 
-      !fracture_hist(:) = c0
-      !call solve_yt_for_strain(nfsd, nfreq, & 
-      !                         floe_rad_l, floe_rad_c, &
-      !                         wavefreq, dwavefreq, &
-      !                         100.0_dbl_kind, &
-      !                         hbar, wave_spectrum, fracture_hist)
- 
       ! do not try to fracture for minimal ice concentration or zero wave spectrum
       if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
 
@@ -477,7 +456,6 @@
       character(len=*),parameter :: &
          subname='(wave_frac)'
     
-      print *, 'wave_spec_type ',wave_spec_type
       if (trim(wave_spec_type).eq.'random') then
           ! run wave fracture to convergence
           loop_max_iter = max_no_iter
@@ -510,22 +488,12 @@
          ! Phase for each Fourier component may be constant or
          ! a random phase that varies in each i loop
          ! See documentation for discussion
-         !if (trim(wave_spec_type).eq.'random') then
-         !   call RANDOM_NUMBER(rand_array)
-         !   if (icepack_warnings_aborted(subname)) return
-         !else
-         !   rand_array(:) = p5
-         !endif
-         rand_array = (/3.920868194323862E-007,  2.548044275764261E-002, &
-  0.352516161261067,       0.666914481524251,       0.963055531894656, &     
-  0.838288203465982,       0.335355043646496,       0.915327203368213, &     
-  0.795863676652503,       0.832693143644796,       0.345042693116063, &     
-  0.871183932316783,       8.991835668825542E-002,  0.888283839684037, &     
-  0.700978902440147,       0.734552583860683,       0.300175817923128, &     
-  4.971772349719251E-002,  0.908189377373128,       9.765859753870422E-002, &
-  4.031338096905369E-002,  8.502479466940610E-002,  0.558820973383161, &     
-  0.926451747654190,       7.564077406631106E-002/)
-         print *, 'rand_array ',rand_array
+         if (trim(wave_spec_type).eq.'random') then
+            call RANDOM_NUMBER(rand_array)
+            if (icepack_warnings_aborted(subname)) return
+         else
+            rand_array(:) = p5
+         endif
          phi = c2*pi*rand_array
 
          do j = 1, nx

@@ -1,5 +1,17 @@
-
-
+!
+!
+!  This module contains the subroutines required to fracture sea ice
+!  by ocean surface waves
+!
+!  Theory based on:
+!
+!  !REF! Tremblay 
+!
+!  This module solves a conservation of momentum equation for a 
+!  thin elastic plate in hydrostatic equilibrium. The FSD is 
+!  updated according to the fracture lengths computed for a floe
+!  in each floe size category
+!
 
      module icepack_wavefracspec_alt
 
@@ -17,7 +29,7 @@
       real (kind=dbl_kind), parameter  :: &
          young_mod  = 10e9, &          ! Youngs Modulus for ice (Pa)
          straincrit = 3.e-5_dbl_kind, & ! critical strain
-         dx = c1 ! domain spacing
+         dx = 0.5_dbl_kind ! domain spacing (m)
 
 !=======================================================================
 
@@ -31,6 +43,7 @@
 !  the floe size distribution
 !
 !  authors: 2018 Lettie Roach, NIWA/VUW
+!           2024 Lettie Roach, Columbia/NASA GISS - updates for new scheme
 !
       subroutine icepack_step_wavefracture_alt(wave_spec_type,   &
                   dt,            ncat,            nfsd,      &
@@ -109,20 +122,6 @@
       d_afsdn_wave   (:,:) = c0
       fracture_hist  (:,:)   = c0
 
-!      hbar = c1
-!      wave_spectrum = (/0.000000000000000E+000,  4.048108530696481E-005, &
-!  5.282969796098769E-004,  1.064894371666014E-003,  1.249741762876511E-003, &
-!  1.229491783306003E-003,  1.080903923138976E-003,  8.635559934191406E-004, &
-!  9.837691904976964E-004,  1.176746212877333E-003,  2.027775160968304E-003, &
-!  4.147783387452364E-003,  8.442047052085400E-003,  3.563777357339859E-002, &
-!  5.805501341819763E-002,  2.729533798992634E-002,  7.663844618946314E-003, &
-!  1.658817403949797E-003,  7.883401121944189E-004,  4.551284946501255E-004, &
-!  4.689317429438233E-004,  9.280506637878716E-004,  5.240151658654213E-004, &
-!  5.421090172603726E-004,  5.024557467550039E-004/)
-
-!      print *, 'wave_spec ',wave_spectrum
-!      print *, 'hbar = ',hbar
-
       ! if all ice is not in first floe size category
       if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny)) then
       if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
@@ -187,81 +186,16 @@
 
 !===========================================================================
 !
-      subroutine four_by_four_matrix_solver(a,b,c)
-
-      real (kind=dbl_kind), dimension(4,4), intent(in) :: &
-         a ! four by four matrix
-
-      real (kind=dbl_kind), dimension(4), intent(in) :: &
-         b ! four-element column vector
-
-      real (kind=dbl_kind), dimension(4), intent(out) :: &
-         c ! four-element column vector
-
-      !--- local
-      
-      real (kind=dbl_kind) :: &
-          deno, deno1, deno2, detaa
-
-      real (kind=dbl_kind), dimension (2,2) :: &
-          aa, aainv
-
-      real (kind=dbl_kind), dimension (2) :: &
-          bb
-
-
-      deno  = a(2,2) - a(1,2)*a(2,1)/a(1,1) 
-      deno1 = a(1,1) * deno
-      deno2 = a(1,1) * deno1 
-    
-      aa(1,1) = -a(3,1)*a(1,2)*a(2,1)*a(1,3)/deno2 + a(3,1)*a(1,2)*a(2,3)/deno1 &
-      - a(3,1)*a(1,3)/a(1,1) + a(3,2)*a(2,1)*a(1,3)/deno1 &
-      - a(3,2)*a(2,3)/deno + a(3,3)
-
-      aa(1,2) = -a(3,1)*a(1,2)*a(2,1)*a(1,4)/deno2 + a(3,1)*a(1,2)*a(2,4)/deno1 &
-      - a(3,1)*a(1,4)/a(1,1) + a(3,2)*a(2,1)*a(1,4)/deno1 &
-      - a(3,2)*a(2,4)/deno + a(3,4)
-
-      aa(2,1) = -a(4,1)*a(1,2)*a(2,1)*a(1,3)/deno2 + a(4,1)*a(1,2)*a(2,3)/deno1 &
-      - a(4,1)*a(1,3)/a(1,1) + a(4,2)*a(2,1)*a(1,3)/deno1 &
-      - a(4,2)*a(2,3)/deno + a(4,3)
-
-      aa(2,2) = -a(4,1)*a(1,2)*a(2,1)*a(1,4)/deno2 + a(4,1)*a(1,2)*a(2,4)/deno1 &
-      - a(4,1)*a(1,4)/a(1,1) + a(4,2)*a(2,1)*a(1,4)/deno1 &
-      - a(4,2)*a(2,4)/deno + a(4,4)
-
-      bb = (/b(3) - a(3,1)*b(1)/a(1,1) + a(3,1)*a(1,2)*b(2)/deno1 &
-     - a(3,1)*a(1,2)*a(2,1)*b(1)/deno2 - a(3,2)*b(2)/deno &
-     + a(3,2)*a(2,1)*b(1)/deno1, &
-     b(4) - a(4,1)*b(1)/a(1,1) + a(4,1)*a(1,2)*b(2)/deno1 &
-     - a(4,1)*a(1,2)*a(2,1)*b(1)/deno2 - a(4,2)*b(2)/deno &
-     + a(4,2)*a(2,1)*b(1)/deno1 /)
-
-
-      detaa = aa(1,1)*aa(2,2)-aa(1,2)*aa(2,1)
-      aainv(1,1) = aa(2,2) 
-      aainv(1,2) = -aa(1,2) 
-      aainv(2,1) = -aa(2,1) 
-      aainv(2,2) = aa(1,1)
-      aainv = aainv / detaa
-
-      c(3:4) = MATMUL(aainv,bb)
-      
-      c(1) = (b(1) - a(1,2)/deno * (b(2) - a(2,1)/a(1,1) * &
-                (b(1) - a(1,3)*c(3) - a(1,4)*c(4)) &
-              - a(2,3)*c(3) - a(2,4)*c(4)) - a(1,3)*c(3) &
-              - a(1,4)*c(4)) / a(1,1) 
-
-      c(2) = (b(2) - a(2,1)/a(1,1) * (b(1) - a(1,3)*c(3) - a(1,4)*c(4)) &
-              - a(2,3)*c(3) - a(2,4)*c(4)) / deno 
-
-      end subroutine four_by_four_matrix_solver
-
-!===========================================================================
-!
       subroutine alt_get_fraclengths(nfsd, floe_rad_c, floe_rad_l, &
-                                     x, strain, frac_local)
- 
+                            x, strain, frac_local)
+! 
+!     Given 1D strain field (with varying size) locate points that exceed 
+!     a critical strain. If critical strain is exceeded for multiple points
+!     in a continuous segment, save the largest value. Compute the distances
+!     between these points, and bin them into the floe size categories
+
+!     authors: 2024 Lettie Roach Columbia/NASA GISS
+
       integer (kind=int_kind), intent(in) :: &
           nfsd
 
@@ -285,7 +219,6 @@
       integer (kind=int_kind) :: &
         nx, n_exceed, j_beg, j_end, j, jj, k, nfrac
  
-      print *, 'BEGIN get fraclengths'
 
       nx = SIZE(strain)
       allocate(exceed_crit_pos (nx))
@@ -297,6 +230,7 @@
       WHERE (strain.lt.-straincrit) exceed_crit_neg = .true.
       n_exceed = COUNT(exceed_crit_pos) + COUNT(exceed_crit_neg)
       allocate(extremelocs(n_exceed))
+      extremelocs(:) = c0
 
       j_beg = 0
       j_end = 0
@@ -339,16 +273,17 @@
       END DO
 
       nfrac = COUNT(extremelocs>0)
-      if (nfrac.eq.0) stop 'need to deal with 0 fracture case'
       allocate(fraclengths(nfrac+1))
 
+      if (nfrac.eq.0) then
+             fraclengths(:) = c0
+      else 
       fraclengths(1) = X(extremelocs(1)) - X(1) 
       do k = 2, nfrac
           fraclengths(k) = X(extremelocs(k)) - X(extremelocs(k-1))
       end do
       fraclengths(nfrac+1) = X(nx) - X(extremelocs(nfrac))
-      print *, 'fraclengths',fraclengths
-
+      end if
       frac_local(:) = c0
 
       ! convert from diameter to radii
@@ -376,19 +311,28 @@
           if (SUM(frac_local) /= c0) frac_local(:) = frac_local(:) / SUM(frac_local(:))
 
       end if
-      print *, 'frac_local', frac_local
 
 
       end subroutine alt_get_fraclengths
 
 !===========================================================================
 !
+!  For an ice plate of length L in hydrostatic equilibrium at the ocean surface,
+!  given a sea surface height field (with random phase), we obtain a fourth-order
+!  inhomogeneous ordinary differential equation describing a simple high pass 
+!  filter.
+!
+!  authors 2024: Bruno Tremblay, McGill 
+!                implemented in Fortran by Lettie Roach
+
       subroutine solve_yt_for_strain(nfsd, nfreq, &
                                      floe_rad_l, floe_rad_c, &
                                      wavefreq, dwavefreq, &
                                      L, hbar, spec_efreq, &
                                      frac_local)
-      
+     
+      external dgesv ! LAPACK matrix solver
+
       integer(kind=int_kind), intent(in) :: &
            nfreq, & ! number of wave frequencies
            nfsd     ! number of floe size categories
@@ -408,17 +352,18 @@
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
            frac_local
 
-      real (kind=dbl_kind), dimension(:),allocatable :: &!, intent(out) :: &
+      real (kind=dbl_kind), dimension(:),allocatable :: &
            strain, strain_yP
 
       ! local variables
       integer (kind = int_kind) :: &
            Lint, nx, & ! length, number of points in domain
-           j ! index
+           j, & ! index
+           info, ipiv(4) ! variables for LAPACK matrix solver
 
       real (kind = dbl_kind), dimension (:), allocatable :: &
            x, xp,  & ! spatial domain 
-           yH, yP, &  ! homogenous, particular SSH solution
+           yH, yP, &  ! homogenous and particular SSH solution
            yppH, yppP, & ! second deriv SSH for each solution
            ypp           ! second deriv SSH for total solution
 
@@ -439,7 +384,7 @@
            aa ! 4x4 matrix
 
        real (kind=dbl_kind), dimension(4) :: &
-           bb, cc ! column vectors
+           bb, cc_alt, cc ! column vectors
 
        real (kind=dbl_kind), dimension(:,:), allocatable :: &
            arg
@@ -460,8 +405,8 @@
 
        ! spectral coefficients
        spec_coeff = sqrt(c2*spec_efreq*dwavefreq)
-
        
+       ! spatial discretization
        DO j=1,nx
            x(j) = -Lint/c2 + (j-1)*dx
        END DO
@@ -470,16 +415,6 @@
        ! and for restarts
        CALL RANDOM_NUMBER(PHIi)
        PHIi = c2*pi*PHIi
-
-!       PHIi = c2*pi*(/3.920868194323862E-007,  2.548044275764261E-002, &
-!  0.352516161261067,       0.666914481524251,       0.963055531894656, &     
-!  0.838288203465982,       0.335355043646496,       0.915327203368213, &     
-!  0.795863676652503,       0.832693143644796,       0.345042693116063, &     
-!  0.871183932316783,       8.991835668825542E-002,  0.888283839684037, &     
-!  0.700978902440147,       0.734552583860683,       0.300175817923128, &     
-!  4.971772349719251E-002,  0.908189377373128,       9.765859753870422E-002, &
-!  4.031338096905369E-002,  8.502479466940610E-002,  0.558820973383161, &     
-!  0.926451747654190,       7.564077406631106E-002/)
 
        I=hbar**3/12
        Lambda = (young_mod*I/(rhow*gravit))**(0.25_dbl_kind)
@@ -495,66 +430,75 @@
        bp = -b - rhoi/rhow*hbar
        ap = -m
 
-       aa(1,1) = EXP(-gamm)*SIN(gamm)
-       aa(1,2) = EXP(-gamm)*COS(gamm)
-       aa(1,3) = -EXP(gamm)*SIN(gamm)
-       aa(1,4) = -EXP(gamm)*COS(gamm)
+       ! only compute homogeneous solution for floes
+       ! less than 300m in diameter
+       if (L.le.300._dbl_kind) then
 
-       aa(2,1) = -EXP(gamm)*SIN(gamm)
-       aa(2,2) = EXP(gamm)*COS(gamm)
-       aa(2,3) = EXP(-gamm)*SIN(gamm)
-       aa(2,4) = -EXP(-gamm)*COS(gamm)
+           aa(1,1) = EXP(-gamm)*SIN(gamm)
+           aa(1,2) = EXP(-gamm)*COS(gamm)
+           aa(1,3) = -EXP(gamm)*SIN(gamm)
+           aa(1,4) = -EXP(gamm)*COS(gamm)
 
-       aa(3,1) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       aa(3,2) = -COS(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
-       aa(3,3) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       aa(3,4) = -SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+           aa(2,1) = -EXP(gamm)*SIN(gamm)
+           aa(2,2) = EXP(gamm)*COS(gamm)
+           aa(2,3) = EXP(-gamm)*SIN(gamm)
+           aa(2,4) = -EXP(-gamm)*COS(gamm)
 
-       aa(4,1) = gamm*SIN(gamm)*SINH(gamm) + gamm*COS(gamm)*COSH(gamm) - SIN(gamm)*COSH(gamm)
-       aa(4,2) = gamm*SIN(gamm)*SINH(gamm) - gamm*COS(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
-       aa(4,3) = -gamm*COS(gamm)*COSH(gamm) - gamm*SIN(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
-       aa(4,4) = -gamm*COS(gamm)*COSH(gamm) + gamm*SIN(gamm)*SINH(gamm) + COS(gamm)*SINH(gamm)
+           aa(3,1) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+           aa(3,2) = -COS(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
+           aa(3,3) = SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+           aa(3,4) = -SIN(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
 
-       bb(1) = Lambda**2*SUM(AAmi/(langi**2)*COS(L/(c2*langi)+PHIi))
-       bb(2) = Lambda**2*SUM(AAmi/(langi**2)*COS(L/(c2*langi)-PHIi))
+           aa(4,1) = gamm*SIN(gamm)*SINH(gamm) + gamm*COS(gamm)*COSH(gamm) - SIN(gamm)*COSH(gamm)
+           aa(4,2) = gamm*SIN(gamm)*SINH(gamm) - gamm*COS(gamm)*COSH(gamm) + COS(gamm)*SINH(gamm)
+           aa(4,3) = -gamm*COS(gamm)*COSH(gamm) - gamm*SIN(gamm)*SINH(gamm) + SIN(gamm)*COSH(gamm)
+           aa(4,4) = -gamm*COS(gamm)*COSH(gamm) + gamm*SIN(gamm)*SINH(gamm) + COS(gamm)*SINH(gamm)
+
+           bb(1) = Lambda**2*SUM(AAmi/(langi**2)*COS(L/(c2*langi)+PHIi))
+           bb(2) = Lambda**2*SUM(AAmi/(langi**2)*COS(L/(c2*langi)-PHIi))
        
-       bb(3) = - SQRT(c2)/(c2*Lambda)*(SUM(AAmi*langi* ( SIN(L/(c2*langi)-PHIi) +&
+           bb(3) = - SQRT(c2)/(c2*Lambda)*(SUM(AAmi*langi* ( SIN(L/(c2*langi)-PHIi) +&
                SIN(L/(c2*langi)+PHIi) )) + bp*L)
 
-       bb(4) = - c1/(c2*Lambda**2)*(SUM(AAmi*langi* &
+           bb(4) = - c1/(c2*Lambda**2)*(SUM(AAmi*langi* &
                ( L/c2*(SIN(L/(c2*langi)-PHIi) - SIN(L/(c2*langi)+PHIi)) + &
                  langi*(COS(L/(c2*langi)-PHIi) - COS(L/(c2*langi)+PHIi)))) + ap*L**3/12)
 
+           ! matrix solver
+           ipiv(:) = c0
+           call DGESV (4, 1, aa, 4, ipiv, cc, 4, info)
+           if (info/=0) then
+               print *, ' -- LAPACK DGESV return error code: ',info
+           end if
+    
+           ! homogenous solution
+           yH = EXP(xp)*(cc(1)*COS(xp)+cc(2)*SIN(xp)) + EXP(-xp)*(cc(3)*COS(xp)+cc(4)*SIN(xp))
+           yppH = (EXP(xp)*(-cc(1)*SIN(xp)+cc(2)*COS(xp)) - EXP(-xp)*(-cc(3)*SIN(xp)+cc(4)*COS(xp)))/Lambda**2
 
-       call four_by_four_matrix_solver(aa,bb,cc)
-
-       yH = EXP(xp)*(cc(1)*COS(xp)+cc(2)*SIN(xp)) + EXP(-xp)*(cc(3)*COS(xp)+cc(4)*SIN(xp))
-       yppH = (EXP(xp)*(-cc(1)*SIN(xp)+cc(2)*COS(xp)) - EXP(-xp)*(-cc(3)*SIN(xp)+cc(4)*COS(xp)))/Lambda**2
+       end if ! L less than 300m
 
        allocate(arg(nfreq,nx))
        DO j=1,nx
            arg(:,j) = x(j)/langi(:) - PHIi(:)
        END DO
 
+       ! compute particular solution
        yP = MATMUL(AAmi,COS(arg))+(ap*x+bp)
        yppP = -MATMUL(AAmi/langi**2,COS(arg))
 
-       ypp = yppP + yppH
-
-       strain = hbar*ypp/c2
        strain_yP = hbar*yppP/c2
 
        ! only consider particular solution for floes>300m
        if (L.gt.300_dbl_kind) then
-              print *, 'max strain yp=',MAXVAL(ABS(strain_yP))
-
-              strain = strain_yP
+           strain = strain_yP
+       else
+           ypp = yppP + yppH
+           strain = hbar*ypp/c2
        end if
 
-       print *, 'max strain=',MAXVAL(ABS(strain))
-
+       ! if strains are large, find fracture length histogram
+       frac_local(:) = c0
        if (MAXVAL(ABS(strain)).gt.straincrit) then
-           print *, 'condition true'
            call alt_get_fraclengths(nfsd, floe_rad_c, floe_rad_l, &
                                     x,strain, frac_local)
        end if
